@@ -1,4 +1,4 @@
-# 🔵 AzuCob - Sistema de Cobrança de Inadimplentes
+# 🔵 AzuCob - Sistema de Cobrança de Inadimplentes Azuton
 
 <p align="center">
   <img src="https://azuton.com/wp-content/uploads/2022/01/Group.png" alt="Azuton" width="200"/>
