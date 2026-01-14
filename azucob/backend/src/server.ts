@@ -161,6 +161,6 @@ process.on('SIGINT', () => {
 start();
 ```
 
-Commit, aguarde o deploy e acesse:
+Commit, aguarde o deploy ficar **verde** e acesse:
 ```
 https://azucob-production.up.railway.app/test-gc
