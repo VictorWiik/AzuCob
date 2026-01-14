@@ -21,11 +21,11 @@ router.post('/auth/register', (req, res) => authController.register(req, res));
 
 // Health check
 router.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: 'v3' });
 });
 
 // TESTE GESTAOCLICK - TEMPORÁRIO
-router.get('/health/gc', async (req, res) => {
+router.get('/testgc', async (req, res) => {
   try {
     const clients = await gestaoClickService.getClients(1, 2);
     res.json({
@@ -136,8 +136,3 @@ router.post('/charges/process', async (req, res) => {
 });
 
 export default router;
-```
-
-Commit, aguarde o deploy e acesse:
-```
-https://azucob-production.up.railway.app/api/health/gc
