@@ -61,12 +61,13 @@ model Client {
 
 // Emails adicionais de cobrança (configurados no AzuCob)
 model ClientEmail {
-  id        String   @id @default(uuid())
-  clientId  String
-  email     String
-  name      String?  // Nome do contato
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id                    String   @id @default(uuid())
+  clientId              String
+  email                 String
+  name                  String?  // Nome do contato
+  gestaoClickContactId  String?  // ID do contato no GestãoClick (se sincronizado)
+  active                Boolean  @default(true)
+  createdAt             DateTime @default(now())
 
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
