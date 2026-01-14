@@ -44,13 +44,12 @@ export default function Login() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src="/azuton-logo.png" 
+              src="/Azuton-logo-semfundo.png" 
               alt="Azuton" 
-              className="h-16 w-auto"
+              className="h-24 w-auto"
             />
           </div>
-          <h1 className="text-2xl font-bold text-white">AzuCob</h1>
-          <p className="text-blue-200 mt-1">Sistema de Cobrança</p>
+          <p className="text-blue-200 text-lg">Sistema de Cobrança</p>
         </div>
 
         {/* Login form */}
