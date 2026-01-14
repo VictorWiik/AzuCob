@@ -90,6 +90,12 @@ export class GestaoClickService {
           limite: limit,
         },
       });
+      
+      // Debug: mostra o primeiro cliente para ver a estrutura
+      if (response.data.data && response.data.data.length > 0) {
+        logger.info('ESTRUTURA DO CLIENTE GESTAOCLICK:', JSON.stringify(response.data.data[0], null, 2));
+      }
+      
       return response.data.data || [];
     } catch (error) {
       logger.error('Erro ao buscar clientes do GestãoClick:', error);
