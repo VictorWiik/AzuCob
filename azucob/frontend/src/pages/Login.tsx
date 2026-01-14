@@ -43,11 +43,13 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <img 
-              src="/Azuton-logo-semfundo.png" 
-              alt="Azuton" 
-              className="h-24 w-auto mix-blend-multiply brightness-0 invert"
-            />
+            <div className="bg-white rounded-2xl px-6 py-4 shadow-xl shadow-black/20">
+              <img 
+                src="/azuton-logo.png" 
+                alt="Azuton" 
+                className="h-12 w-auto"
+              />
+            </div>
           </div>
           <p className="text-blue-200 text-lg">Sistema de Cobrança</p>
         </div>
