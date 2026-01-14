@@ -54,11 +54,13 @@ export default function Layout() {
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-blue-800">
             <div className="flex items-center gap-2">
-              <img 
-                src="/azuton-logo.png" 
-                alt="Azuton" 
-                className="h-8 w-auto brightness-0 invert"
-              />
+              <div className="bg-white rounded-lg px-3 py-1.5 shadow-lg shadow-black/20">
+                <img 
+                  src="/azuton-logo.png" 
+                  alt="Azuton" 
+                  className="h-6 w-auto"
+                />
+              </div>
             </div>
             <button
               className="lg:hidden text-gray-400 hover:text-white"
