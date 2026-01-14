@@ -162,8 +162,10 @@ export class GestaoClickService {
 
   /**
    * Busca recebimentos em atraso (inadimplentes)
+   * @param dataInicio - Data inicial (formato YYYY-MM-DD)
+   * @param dataFim - Data final (formato YYYY-MM-DD)
    */
-  async getOverdueReceivables(): Promise<GestaoClickReceivable[]> {
+  async getOverdueReceivables(dataInicio?: string, dataFim?: string): Promise<GestaoClickReceivable[]> {
     try {
       const allOverdue: GestaoClickReceivable[] = [];
       let page = 1;
@@ -175,6 +177,8 @@ export class GestaoClickService {
             liquidado: 'at', // at = Em atraso
             pagina: page,
             limite: 100,
+            data_inicio: dataInicio,
+            data_fim: dataFim,
           },
         });
         
