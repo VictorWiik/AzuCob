@@ -21,7 +21,7 @@ router.post('/auth/register', (req, res) => authController.register(req, res));
 
 // Health check
 router.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: 'v3' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: 'v4' });
 });
 
 // TESTE GESTAOCLICK - TEMPORÁRIO
@@ -100,7 +100,11 @@ router.post('/sync/clients', async (req, res) => {
 
 router.post('/sync/receivables', async (req, res) => {
   try {
-    const result = await syncService.syncReceivables();
+    const { filterDays, startDate } = req.body;
+    const result = await syncService.syncReceivables(
+      filterDays ? parseInt(filterDays) : undefined,
+      startDate
+    );
     res.json({ message: 'Sincronização de contas concluída', result });
   } catch (error) {
     res.status(500).json({ error: 'Erro na sincronização' });
@@ -118,7 +122,11 @@ router.post('/sync/efi', async (req, res) => {
 
 router.post('/sync/full', async (req, res) => {
   try {
-    await syncService.fullSync();
+    const { filterDays, startDate } = req.body;
+    await syncService.fullSync(
+      filterDays ? parseInt(filterDays) : undefined,
+      startDate
+    );
     res.json({ message: 'Sincronização completa concluída' });
   } catch (error) {
     res.status(500).json({ error: 'Erro na sincronização' });
