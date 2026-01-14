@@ -24,18 +24,16 @@ router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// TESTE: Ver dados brutos do GestãoClick (TEMPORÁRIO - REMOVER DEPOIS)
-router.get('/test/gestaoclick-raw', async (req, res) => {
+// TESTE GESTAOCLICK - TEMPORÁRIO
+router.get('/health/gc', async (req, res) => {
   try {
-    const clients = await gestaoClickService.getClients(1, 3);
+    const clients = await gestaoClickService.getClients(1, 2);
     res.json({
-      message: 'Dados brutos do GestãoClick',
-      totalRetornado: clients.length,
       campos: clients.length > 0 ? Object.keys(clients[0]) : [],
-      clientes: clients,
+      primeiroCliente: clients[0] || null,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar dados', details: String(error) });
+    res.status(500).json({ error: String(error) });
   }
 });
 
@@ -142,4 +140,4 @@ export default router;
 
 Commit, aguarde o deploy e acesse:
 ```
-https://gregarious-harmony-production.up.railway.app/api/test/gestaoclick-raw
+https://azucob-production.up.railway.app/api/health/gc
