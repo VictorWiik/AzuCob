@@ -9,8 +9,24 @@ import { logger } from './utils/logger.js';
 import routes from './routes/index.js';
 import { syncService } from './services/syncService.js';
 import { chargeService } from './services/chargeService.js';
+import { gestaoClickService } from './services/gestaoClickService.js';
 
 const app = express();
+
+// ============================================
+// ROTA DE TESTE - ANTES DE TUDO
+// ============================================
+app.get('/api/health/gc', async (req, res) => {
+  try {
+    const clients = await gestaoClickService.getClients(1, 2);
+    res.json({
+      campos: clients.length > 0 ? Object.keys(clients[0]) : [],
+      primeiroCliente: clients[0] || null,
+    });
+  } catch (error) {
+    res.status(500).json({ error: String(error) });
+  }
+});
 
 // ============================================
 // MIDDLEWARES
@@ -143,3 +159,8 @@ process.on('SIGINT', () => {
 });
 
 start();
+```
+
+Commit, aguarde o deploy terminar (veja nos logs se compilou sem erro) e acesse:
+```
+https://azucob-production.up.railway.app/api/health/gc
