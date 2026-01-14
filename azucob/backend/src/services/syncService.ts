@@ -2,7 +2,7 @@ import { prisma } from '../config/database.js';
 import { gestaoClickService } from './gestaoClickService.js';
 import { efiService } from './efiService.js';
 import { logger } from '../utils/logger.js';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, subDays, format } from 'date-fns';
 
 export class SyncService {
   /**
@@ -17,13 +17,11 @@ export class SyncService {
 
       for (const gc of gestaoClients) {
         try {
-          // Tenta pegar o documento de várias formas possíveis
           const gcAny = gc as any;
           const cnpj = (gcAny.cnpj || gcAny.CNPJ || '') as string;
           const cpf = (gcAny.cpf || gcAny.CPF || '') as string;
           const cpfCnpj = (gcAny.cpf_cnpj || gcAny.CPF_CNPJ || '') as string;
           
-          // Remove caracteres não numéricos
           const document = cnpj?.replace(/\D/g, '') || cpf?.replace(/\D/g, '') || cpfCnpj?.replace(/\D/g, '') || '';
           
           if (!document) {
@@ -34,7 +32,6 @@ export class SyncService {
 
           const documentType = gc.tipo_pessoa === 'PJ' ? 'CNPJ' : 'CPF';
 
-          // Pega cidade e estado do primeiro endereço
           const endereco = gc.enderecos?.[0]?.endereco;
           const city = endereco?.nome_cidade || null;
           const state = endereco?.estado || null;
@@ -71,9 +68,7 @@ export class SyncService {
             stats.created++;
           }
 
-          // Sincroniza emails de contato
           if (gc.contatos && gc.contatos.length > 0) {
-            // Remove emails antigos sincronizados
             await prisma.clientEmail.deleteMany({
               where: { 
                 clientId: clientId,
@@ -81,12 +76,10 @@ export class SyncService {
               },
             });
 
-            // Adiciona emails de contato do GestãoClick
             for (const contato of gc.contatos) {
               const email = contato.contato?.contato;
               const nome = contato.contato?.nome;
               
-              // Verifica se é um email válido
               if (email && email.includes('@')) {
                 await prisma.clientEmail.create({
                   data: {
@@ -116,19 +109,37 @@ export class SyncService {
 
   /**
    * Sincroniza recebimentos em atraso (inadimplentes) do GestãoClick
+   * @param filterDays - Filtrar por últimos X dias (30, 60, 90) ou null para data específica
+   * @param startDate - Data inicial específica (formato YYYY-MM-DD)
    */
-  async syncReceivables(): Promise<{ created: number; updated: number; errors: number }> {
+  async syncReceivables(filterDays?: number, startDate?: string): Promise<{ created: number; updated: number; errors: number }> {
     const stats = { created: 0, updated: 0, errors: 0 };
 
     try {
-      const receivables = await gestaoClickService.getOverdueReceivables();
-      logger.info(`Sincronizando ${receivables.length} recebimentos em atraso`);
-
+      // Calcula a data inicial baseado no filtro
+      let dataInicio: string;
       const today = new Date();
+      
+      if (startDate) {
+        // Data específica fornecida
+        dataInicio = startDate;
+      } else if (filterDays) {
+        // Últimos X dias
+        dataInicio = format(subDays(today, filterDays), 'yyyy-MM-dd');
+      } else {
+        // Padrão: últimos 90 dias
+        dataInicio = format(subDays(today, 90), 'yyyy-MM-dd');
+      }
+
+      const dataFim = format(today, 'yyyy-MM-dd');
+
+      logger.info(`Buscando recebimentos em atraso de ${dataInicio} até ${dataFim}`);
+
+      const receivables = await gestaoClickService.getOverdueReceivables(dataInicio, dataFim);
+      logger.info(`Sincronizando ${receivables.length} recebimentos em atraso`);
 
       for (const rec of receivables) {
         try {
-          // Busca cliente local pelo ID do GestãoClick
           const client = await prisma.client.findUnique({
             where: { gestaoClickId: rec.cliente_id?.toString() },
           });
@@ -193,7 +204,6 @@ export class SyncService {
     const stats = { updated: 0, errors: 0 };
 
     try {
-      // Busca contas que não têm boleto ainda
       const receivables = await prisma.receivable.findMany({
         where: {
           status: { in: ['PENDING', 'OVERDUE'] },
@@ -207,11 +217,10 @@ export class SyncService {
 
       for (const rec of receivables) {
         try {
-          // Busca cobranças no Efí pelo custom_id (pode ser o ID do GestãoClick)
           const charges = await efiService.getChargesByCustomId(rec.gestaoClickId);
 
           if (charges.length > 0) {
-            const charge = charges[0]; // Pega a mais recente
+            const charge = charges[0];
             
             await prisma.receivable.update({
               where: { id: rec.id },
@@ -240,11 +249,11 @@ export class SyncService {
   /**
    * Executa sincronização completa
    */
-  async fullSync(): Promise<void> {
+  async fullSync(filterDays?: number, startDate?: string): Promise<void> {
     logger.info('Iniciando sincronização completa...');
     
     await this.syncClients();
-    await this.syncReceivables();
+    await this.syncReceivables(filterDays, startDate);
     await this.syncEfiBoletos();
     
     logger.info('Sincronização completa finalizada');
