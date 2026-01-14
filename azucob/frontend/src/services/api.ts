@@ -39,10 +39,10 @@ export const api = {
 
   // Auth
   login: (email: string, password: string) =>
-    axiosInstance.post('/auth/login', { email, password }),
+    axiosInstance.post('/auth/login', { email, password }).then((r) => r.data),
   register: (data: { email: string; password: string; name: string }) =>
-    axiosInstance.post('/auth/register', data),
-  me: () => axiosInstance.get('/auth/me'),
+    axiosInstance.post('/auth/register', data).then((r) => r.data),
+  me: () => axiosInstance.get('/auth/me').then((r) => r.data),
 
   // Dashboard
   getDashboardSummary: () => axiosInstance.get('/dashboard/summary').then((r) => r.data),
