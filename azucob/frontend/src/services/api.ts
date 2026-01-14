@@ -9,9 +9,23 @@ const axiosInstance = axios.create({
   },
 });
 
+// Função para pegar o token do zustand persist
+const getToken = (): string | null => {
+  try {
+    const authData = localStorage.getItem('azucob-auth');
+    if (authData) {
+      const parsed = JSON.parse(authData);
+      return parsed.state?.token || null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
 // Interceptor para adicionar token
 axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -23,7 +37,7 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
+      localStorage.removeItem('azucob-auth');
       window.location.href = '/login';
     }
     return Promise.reject(error);
