@@ -14,9 +14,9 @@ import { gestaoClickService } from './services/gestaoClickService.js';
 const app = express();
 
 // ============================================
-// ROTA DE TESTE - ANTES DE TUDO
+// ROTA DE TESTE - ANTES DE TUDO (FORA DO /api)
 // ============================================
-app.get('/api/health/gc', async (req, res) => {
+app.get('/test-gc', async (req, res) => {
   try {
     const clients = await gestaoClickService.getClients(1, 2);
     res.json({
@@ -161,6 +161,6 @@ process.on('SIGINT', () => {
 start();
 ```
 
-Commit, aguarde o deploy terminar (veja nos logs se compilou sem erro) e acesse:
+Commit, aguarde o deploy e acesse:
 ```
-https://azucob-production.up.railway.app/api/health/gc
+https://azucob-production.up.railway.app/test-gc
