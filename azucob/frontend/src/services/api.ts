@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
 
 const axiosInstance = axios.create({
   baseURL: `${API_URL}/api`,
@@ -31,6 +31,12 @@ axiosInstance.interceptors.response.use(
 );
 
 export const api = {
+  // Generic methods
+  get: (url: string, config?: any) => axiosInstance.get(url, config).then((r) => r.data),
+  post: (url: string, data?: any, config?: any) => axiosInstance.post(url, data, config).then((r) => r.data),
+  put: (url: string, data?: any, config?: any) => axiosInstance.put(url, data, config).then((r) => r.data),
+  delete: (url: string, config?: any) => axiosInstance.delete(url, config).then((r) => r.data),
+
   // Auth
   login: (email: string, password: string) =>
     axiosInstance.post('/auth/login', { email, password }),
