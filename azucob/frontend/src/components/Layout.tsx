@@ -46,18 +46,19 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-dark transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-[#1a365d] transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-700">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-blue-800">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">AZ</span>
-              </div>
-              <span className="text-white font-semibold text-lg">AzuCob</span>
+              <img 
+                src="/azuton-logo.png" 
+                alt="Azuton" 
+                className="h-8 w-auto brightness-0 invert"
+              />
             </div>
             <button
               className="lg:hidden text-gray-400 hover:text-white"
@@ -77,8 +78,8 @@ export default function Layout() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                      : 'text-blue-200 hover:bg-blue-800 hover:text-white'
                   }`
                 }
               >
@@ -89,29 +90,29 @@ export default function Layout() {
           </nav>
 
           {/* User section */}
-          <div className="p-4 border-t border-gray-700">
+          <div className="p-4 border-t border-blue-800">
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-300 hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-blue-200 hover:bg-blue-800 transition-colors"
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
                   <span className="text-white font-medium text-xs">
                     {user?.name?.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                  <p className="text-xs text-blue-300 truncate">{user?.email}</p>
                 </div>
                 <ChevronDown className={`w-4 h-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {userMenuOpen && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden">
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-blue-900 rounded-xl shadow-lg border border-blue-700 overflow-hidden">
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-blue-200 hover:bg-blue-800 hover:text-white transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
                     Sair
