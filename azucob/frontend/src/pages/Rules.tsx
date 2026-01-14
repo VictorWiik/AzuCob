@@ -26,8 +26,8 @@ export default function Rules() {
 
   const fetchRules = async () => {
     try {
-      const response = await api.get('/rules')
-      setRules(response.data)
+      const data = await api.get('/rules')
+      setRules(data || [])
     } catch (error) {
       toast.error('Erro ao carregar regras')
     } finally {
@@ -37,8 +37,9 @@ export default function Rules() {
 
   const fetchTemplates = async () => {
     try {
-      const response = await api.get('/templates')
-      setTemplates(response.data.filter((t: Template) => t.isActive))
+      const data = await api.get('/templates')
+      const templateList = data || []
+      setTemplates(templateList.filter((t: Template) => t.isActive))
     } catch (error) {
       console.error('Erro ao carregar templates')
     }
