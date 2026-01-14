@@ -1,111 +1,233 @@
-import axios from 'axios';
+import axios from 'axios'
+import type {
+  Client,
+  Receivable,
+  EmailTemplate,
+  ChargeRule,
+  DashboardSummary,
+  PaginatedResponse,
+  User,
+} from '../types'
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
-const axiosInstance = axios.create({
-  baseURL: `${API_URL}/api`,
+const apiClient = axios.create({
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-});
-
-// Função para pegar o token do zustand persist
-const getToken = (): string | null => {
-  try {
-    const authData = localStorage.getItem('azucob-auth');
-    if (authData) {
-      const parsed = JSON.parse(authData);
-      return parsed.state?.token || null;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-};
+})
 
 // Interceptor para adicionar token
-axiosInstance.interceptors.request.use((config) => {
-  const token = getToken();
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('azucob_token')
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`
   }
-  return config;
-});
+  return config
+})
 
 // Interceptor para tratar erros
-axiosInstance.interceptors.response.use(
+apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('azucob-auth');
-      window.location.href = '/login';
+      localStorage.removeItem('azucob_token')
+      window.location.href = '/login'
     }
-    return Promise.reject(error);
+    return Promise.reject(error)
   }
-);
+)
 
 export const api = {
-  // Generic methods
-  get: (url: string, config?: any) => axiosInstance.get(url, config).then((r) => r.data),
-  post: (url: string, data?: any, config?: any) => axiosInstance.post(url, data, config).then((r) => r.data),
-  put: (url: string, data?: any, config?: any) => axiosInstance.put(url, data, config).then((r) => r.data),
-  delete: (url: string, config?: any) => axiosInstance.delete(url, config).then((r) => r.data),
-
   // Auth
-  login: (email: string, password: string) =>
-    axiosInstance.post('/auth/login', { email, password }).then((r) => r.data),
-  register: (data: { email: string; password: string; name: string }) =>
-    axiosInstance.post('/auth/register', data).then((r) => r.data),
-  me: () => axiosInstance.get('/auth/me').then((r) => r.data),
+  login: async (email: string, password: string) => {
+    const response = await apiClient.post('/auth/login', { email, password })
+    return response.data
+  },
+
+  register: async (name: string, email: string, password: string) => {
+    const response = await apiClient.post('/auth/register', { name, email, password })
+    return response.data
+  },
+
+  me: async (): Promise<User> => {
+    const response = await apiClient.get('/auth/me')
+    return response.data
+  },
 
   // Dashboard
-  getDashboardSummary: () => axiosInstance.get('/dashboard/summary').then((r) => r.data),
-  getTopDebtors: () => axiosInstance.get('/dashboard/top-debtors').then((r) => r.data),
-  getRecentCharges: () => axiosInstance.get('/dashboard/recent-charges').then((r) => r.data),
-  getIntegrationStatus: () => axiosInstance.get('/dashboard/integration-status').then((r) => r.data),
+  getDashboardSummary: async (): Promise<DashboardSummary> => {
+    const response = await apiClient.get('/dashboard/summary')
+    return response.data
+  },
+
+  getTopDebtors: async () => {
+    const response = await apiClient.get('/dashboard/top-debtors')
+    return response.data
+  },
+
+  getRecentCharges: async () => {
+    const response = await apiClient.get('/dashboard/recent-charges')
+    return response.data
+  },
+
+  getIntegrationStatus: async () => {
+    const response = await apiClient.get('/dashboard/integration-status')
+    return response.data
+  },
 
   // Clients
-  getClients: (params?: any) => axiosInstance.get('/clients', { params }).then((r) => r.data),
-  getClient: (id: string) => axiosInstance.get(`/clients/${id}`).then((r) => r.data),
-  getOverdueClients: () => axiosInstance.get('/clients/overdue').then((r) => r.data),
-  addClientEmail: (clientId: string, email: string, name?: string) =>
-    axiosInstance.post(`/clients/${clientId}/emails`, { email, name }).then((r) => r.data),
-  removeClientEmail: (clientId: string, emailId: string) =>
-    axiosInstance.delete(`/clients/${clientId}/emails/${emailId}`).then((r) => r.data),
+  getClients: async (params?: {
+    page?: number
+    limit?: number
+    search?: string
+  }): Promise<PaginatedResponse<Client>> => {
+    const response = await apiClient.get('/clients', { params })
+    return response.data
+  },
+
+  getOverdueClients: async (): Promise<Client[]> => {
+    const response = await apiClient.get('/clients/overdue')
+    return response.data
+  },
+
+  getClientById: async (id: string): Promise<Client> => {
+    const response = await apiClient.get(`/clients/${id}`)
+    return response.data
+  },
+
+  addClientEmail: async (clientId: string, email: string, name?: string) => {
+    const response = await apiClient.post(`/clients/${clientId}/emails`, {
+      email,
+      name,
+    })
+    return response.data
+  },
+
+  removeClientEmail: async (clientId: string, emailId: string) => {
+    await apiClient.delete(`/clients/${clientId}/emails/${emailId}`)
+  },
 
   // Receivables
-  getReceivables: (params?: any) => axiosInstance.get('/receivables', { params }).then((r) => r.data),
-  getReceivable: (id: string) => axiosInstance.get(`/receivables/${id}`).then((r) => r.data),
-  getOverdueReceivables: () => axiosInstance.get('/receivables/overdue').then((r) => r.data),
-  settleReceivable: (id: string, data: any) =>
-    axiosInstance.post(`/receivables/${id}/settle`, data).then((r) => r.data),
-  sendCharge: (id: string, data?: any) =>
-    axiosInstance.post(`/receivables/${id}/charge`, data).then((r) => r.data),
+  getReceivables: async (params?: {
+    page?: number
+    limit?: number
+    status?: string
+  }): Promise<PaginatedResponse<Receivable>> => {
+    const response = await apiClient.get('/receivables', { params })
+    return response.data
+  },
+
+  getOverdueReceivables: async (): Promise<Receivable[]> => {
+    const response = await apiClient.get('/receivables/overdue')
+    return response.data
+  },
+
+  getReceivableById: async (id: string): Promise<Receivable> => {
+    const response = await apiClient.get(`/receivables/${id}`)
+    return response.data
+  },
+
+  settleReceivable: async (
+    id: string,
+    data: { paidValue: number; paidAt: string }
+  ) => {
+    const response = await apiClient.post(`/receivables/${id}/settle`, data)
+    return response.data
+  },
+
+  sendCharge: async (id: string, templateId: string) => {
+    const response = await apiClient.post(`/receivables/${id}/charge`, {
+      templateId,
+    })
+    return response.data
+  },
 
   // Templates
-  getTemplates: () => axiosInstance.get('/templates').then((r) => r.data),
-  getTemplate: (id: string) => axiosInstance.get(`/templates/${id}`).then((r) => r.data),
-  getTemplateVariables: () => axiosInstance.get('/templates/variables').then((r) => r.data),
-  createTemplate: (data: any) => axiosInstance.post('/templates', data).then((r) => r.data),
-  updateTemplate: (id: string, data: any) => axiosInstance.put(`/templates/${id}`, data).then((r) => r.data),
-  deleteTemplate: (id: string) => axiosInstance.delete(`/templates/${id}`).then((r) => r.data),
+  getTemplates: async (): Promise<EmailTemplate[]> => {
+    const response = await apiClient.get('/templates')
+    return response.data
+  },
+
+  getTemplateById: async (id: string): Promise<EmailTemplate> => {
+    const response = await apiClient.get(`/templates/${id}`)
+    return response.data
+  },
+
+  createTemplate: async (data: Partial<EmailTemplate>) => {
+    const response = await apiClient.post('/templates', data)
+    return response.data
+  },
+
+  updateTemplate: async (id: string, data: Partial<EmailTemplate>) => {
+    const response = await apiClient.put(`/templates/${id}`, data)
+    return response.data
+  },
+
+  deleteTemplate: async (id: string) => {
+    await apiClient.delete(`/templates/${id}`)
+  },
+
+  getAvailableVariables: async () => {
+    const response = await apiClient.get('/templates/variables')
+    return response.data
+  },
 
   // Rules
-  getRules: () => axiosInstance.get('/rules').then((r) => r.data),
-  getRule: (id: string) => axiosInstance.get(`/rules/${id}`).then((r) => r.data),
-  createRule: (data: any) => axiosInstance.post('/rules', data).then((r) => r.data),
-  updateRule: (id: string, data: any) => axiosInstance.put(`/rules/${id}`, data).then((r) => r.data),
-  deleteRule: (id: string) => axiosInstance.delete(`/rules/${id}`).then((r) => r.data),
-  toggleRule: (id: string) => axiosInstance.post(`/rules/${id}/toggle`).then((r) => r.data),
+  getRules: async (): Promise<ChargeRule[]> => {
+    const response = await apiClient.get('/rules')
+    return response.data
+  },
+
+  getRuleById: async (id: string): Promise<ChargeRule> => {
+    const response = await apiClient.get(`/rules/${id}`)
+    return response.data
+  },
+
+  createRule: async (data: Partial<ChargeRule>) => {
+    const response = await apiClient.post('/rules', data)
+    return response.data
+  },
+
+  updateRule: async (id: string, data: Partial<ChargeRule>) => {
+    const response = await apiClient.put(`/rules/${id}`, data)
+    return response.data
+  },
+
+  deleteRule: async (id: string) => {
+    await apiClient.delete(`/rules/${id}`)
+  },
+
+  toggleRuleActive: async (id: string) => {
+    const response = await apiClient.post(`/rules/${id}/toggle`)
+    return response.data
+  },
 
   // Sync
-  syncClients: () => axiosInstance.post('/sync/clients').then((r) => r.data),
-  syncReceivables: () => axiosInstance.post('/sync/receivables').then((r) => r.data),
-  syncEfi: () => axiosInstance.post('/sync/efi').then((r) => r.data),
-  fullSync: () => axiosInstance.post('/sync/full').then((r) => r.data),
+  syncClients: async () => {
+    const response = await apiClient.post('/sync/clients')
+    return response.data
+  },
+
+  syncReceivables: async (params?: { filterDays?: string; startDate?: string }) => {
+    const response = await apiClient.post('/sync/receivables', params)
+    return response.data
+  },
+
+  syncEfi: async () => {
+    const response = await apiClient.post('/sync/efi')
+    return response.data
+  },
+
+  fullSync: async (params?: { filterDays?: string; startDate?: string }) => {
+    const response = await apiClient.post('/sync/full', params)
+    return response.data
+  },
 
   // Charges
-  processCharges: () => axiosInstance.post('/charges/process').then((r) => r.data),
-};
-
-export default api;
+  processCharges: async () => {
+    const response = await apiClient.post('/charges/process')
+    return response.data
+  },
+}
