@@ -17,8 +17,13 @@ export class SyncService {
 
       for (const gc of gestaoClients) {
         try {
+          // Debug: log dos dados do cliente
+          logger.info(`Cliente ${gc.id} dados brutos:`, JSON.stringify(gc).substring(0, 500));
+          
           // Monta o documento (CPF ou CNPJ)
           const document = gc.cnpj?.replace(/\D/g, '') || gc.cpf?.replace(/\D/g, '') || '';
+          
+          logger.info(`Cliente ${gc.id}: cpf=${gc.cpf}, cnpj=${gc.cnpj}, document=${document}`);
           
           if (!document) {
             logger.warn(`Cliente ${gc.id} (${gc.nome}) não tem CPF/CNPJ, pulando...`);
