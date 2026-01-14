@@ -54,8 +54,8 @@ export const api = {
   getClients: (params?: any) => axiosInstance.get('/clients', { params }).then((r) => r.data),
   getClient: (id: string) => axiosInstance.get(`/clients/${id}`).then((r) => r.data),
   getOverdueClients: () => axiosInstance.get('/clients/overdue').then((r) => r.data),
-  addClientEmail: (clientId: string, email: string) =>
-    axiosInstance.post(`/clients/${clientId}/emails`, { email }).then((r) => r.data),
+  addClientEmail: (clientId: string, email: string, name?: string) =>
+    axiosInstance.post(`/clients/${clientId}/emails`, { email, name }).then((r) => r.data),
   removeClientEmail: (clientId: string, emailId: string) =>
     axiosInstance.delete(`/clients/${clientId}/emails/${emailId}`).then((r) => r.data),
 
