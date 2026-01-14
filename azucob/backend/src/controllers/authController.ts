@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { prisma } from '../config/database.js';
 import { config } from '../config/env.js';
 import { z } from 'zod';
@@ -15,6 +15,10 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
 });
+
+const jwtOptions: SignOptions = {
+  expiresIn: '24h',
+};
 
 export class AuthController {
   async login(req: Request, res: Response): Promise<void> {
@@ -40,7 +44,7 @@ export class AuthController {
       const token = jwt.sign(
         { userId: user.id, email: user.email },
         config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn as string }
+        jwtOptions
       );
 
       res.json({
@@ -94,7 +98,7 @@ export class AuthController {
       const token = jwt.sign(
         { userId: user.id, email: user.email },
         config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn as string }
+        jwtOptions
       );
 
       res.status(201).json({ token, user });
@@ -108,7 +112,6 @@ export class AuthController {
   }
 
   async me(req: Request, res: Response): Promise<void> {
-    // req.user já está populado pelo middleware
     res.json({ user: (req as any).user });
   }
 }
