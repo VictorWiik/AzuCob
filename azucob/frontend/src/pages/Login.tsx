@@ -46,7 +46,7 @@ export default function Login() {
             <img 
               src="/Azuton-logo-semfundo.png" 
               alt="Azuton" 
-              className="h-24 w-auto"
+              className="h-24 w-auto mix-blend-multiply brightness-0 invert"
             />
           </div>
           <p className="text-blue-200 text-lg">Sistema de Cobrança</p>
