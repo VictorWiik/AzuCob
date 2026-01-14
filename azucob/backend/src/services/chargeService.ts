@@ -14,7 +14,7 @@ export class ChargeService {
     try {
       // Busca regras de cobrança ativas
       const rules = await prisma.chargeRule.findMany({
-        where: { active: true },
+        where: { isActive: true },
         include: { template: true },
         orderBy: { daysOverdue: 'asc' },
       });
@@ -45,8 +45,8 @@ export class ChargeService {
           .filter((r) => r.daysOverdue <= receivable.daysOverdue)
           .pop();
 
-        if (!applicableRule) {
-          continue; // Nenhuma regra se aplica ainda
+        if (!applicableRule || !applicableRule.template) {
+          continue; // Nenhuma regra se aplica ainda ou template não encontrado
         }
 
         // Verifica se já foi enviado email para esta regra
@@ -81,13 +81,13 @@ export class ChargeService {
           let boletoPdf: Buffer | null = null;
           let invoicePdf: Buffer | null = null;
 
-          if (receivable.efiChargeId) {
+          if (applicableRule.sendBoleto && receivable.efiChargeId) {
             boletoPdf = await efiService.getBoletoPdf(
               parseInt(receivable.efiChargeId)
             );
           }
 
-          if (receivable.gestaoClickId) {
+          if (applicableRule.sendInvoice && receivable.gestaoClickId) {
             invoicePdf = await gestaoClickService.getInvoicePdf(
               parseInt(receivable.gestaoClickId)
             );
@@ -101,7 +101,7 @@ export class ChargeService {
             dueDate: receivable.dueDate.toISOString(),
             daysOverdue: receivable.daysOverdue,
             description: receivable.description,
-            template: applicableRule.template.body,
+            template: applicableRule.template.htmlContent,
             subject: applicableRule.template.subject,
             boletoPdf: boletoPdf || undefined,
             invoicePdf: invoicePdf || undefined,
@@ -114,10 +114,9 @@ export class ChargeService {
               receivableId: receivable.id,
               templateId: applicableRule.templateId,
               ruleId: applicableRule.id,
-              sentById: applicableRule.createdById, // Usa criador da regra como responsável
               toEmails: emails,
               subject: applicableRule.template.subject,
-              body: applicableRule.template.body,
+              body: applicableRule.template.htmlContent,
               attachments: [
                 boletoPdf ? 'boleto.pdf' : null,
                 invoicePdf ? 'fatura.pdf' : null,
@@ -218,7 +217,7 @@ export class ChargeService {
       dueDate: receivable.dueDate.toISOString(),
       daysOverdue: receivable.daysOverdue,
       description: receivable.description,
-      template: template.body,
+      template: template.htmlContent,
       subject: template.subject,
       boletoPdf: boletoPdf || undefined,
       invoicePdf: invoicePdf || undefined,
@@ -233,7 +232,7 @@ export class ChargeService {
         sentById: params.userId,
         toEmails: uniqueEmails,
         subject: template.subject,
-        body: template.body,
+        body: template.htmlContent,
         attachments: [
           boletoPdf ? 'boleto.pdf' : null,
           invoicePdf ? 'fatura.pdf' : null,
