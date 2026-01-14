@@ -15,16 +15,6 @@ export class SyncService {
       const gestaoClients = await gestaoClickService.getAllClients();
       logger.info(`Sincronizando ${gestaoClients.length} clientes do GestãoClick`);
 
-      // DEBUG: Mostra o primeiro cliente completo
-      if (gestaoClients.length > 0) {
-        const primeiro = gestaoClients[0];
-        console.log('=== PRIMEIRO CLIENTE RAW ===');
-        console.log(JSON.stringify(primeiro, null, 2));
-        console.log('=== CAMPOS DISPONIVEIS ===');
-        console.log(Object.keys(primeiro));
-        console.log('=== FIM DEBUG ===');
-      }
-
       for (const gc of gestaoClients) {
         try {
           // Tenta pegar o documento de várias formas possíveis
@@ -35,8 +25,6 @@ export class SyncService {
           
           // Remove caracteres não numéricos
           const document = cnpj?.replace(/\D/g, '') || cpf?.replace(/\D/g, '') || cpfCnpj?.replace(/\D/g, '') || '';
-          
-          console.log(`Cliente ${gc.id}: cnpj="${cnpj}", cpf="${cpf}", cpf_cnpj="${cpfCnpj}", document="${document}"`);
           
           if (!document) {
             logger.warn(`Cliente ${gc.id} (${gc.nome}) não tem CPF/CNPJ, pulando...`);
@@ -127,14 +115,14 @@ export class SyncService {
   }
 
   /**
-   * Sincroniza contas a receber (inadimplentes) do GestãoClick
+   * Sincroniza recebimentos em atraso (inadimplentes) do GestãoClick
    */
   async syncReceivables(): Promise<{ created: number; updated: number; errors: number }> {
     const stats = { created: 0, updated: 0, errors: 0 };
 
     try {
       const receivables = await gestaoClickService.getOverdueReceivables();
-      logger.info(`Sincronizando ${receivables.length} contas a receber`);
+      logger.info(`Sincronizando ${receivables.length} recebimentos em atraso`);
 
       const today = new Date();
 
@@ -142,21 +130,19 @@ export class SyncService {
         try {
           // Busca cliente local pelo ID do GestãoClick
           const client = await prisma.client.findUnique({
-            where: { gestaoClickId: rec.cliente_id.toString() },
+            where: { gestaoClickId: rec.cliente_id?.toString() },
           });
 
           if (!client) {
-            logger.warn(`Cliente ${rec.cliente_id} não encontrado localmente`);
+            logger.warn(`Cliente ${rec.cliente_id} (${rec.nome_cliente}) não encontrado localmente`);
             stats.errors++;
             continue;
           }
 
           const dueDate = new Date(rec.data_vencimento);
           const daysOverdue = differenceInDays(today, dueDate);
-          const valor = typeof rec.valor === 'string' ? parseFloat(rec.valor) : rec.valor;
-          const valorRecebido = rec.valor_recebido 
-            ? (typeof rec.valor_recebido === 'string' ? parseFloat(rec.valor_recebido) : rec.valor_recebido)
-            : null;
+          const valor = parseFloat(rec.valor || '0');
+          const valorTotal = parseFloat(rec.valor_total || rec.valor || '0');
 
           const existing = await prisma.receivable.findUnique({
             where: { gestaoClickId: rec.id.toString() },
@@ -165,17 +151,14 @@ export class SyncService {
           const receivableData = {
             gestaoClickId: rec.id.toString(),
             clientId: client.id,
-            description: rec.descricao,
+            description: rec.descricao || `Recebimento #${rec.codigo}`,
             value: valor,
             dueDate: dueDate,
-            status: rec.situacao === 'R' ? 'PAID' as const : 
-                   rec.situacao === 'C' ? 'CANCELLED' as const :
+            status: rec.liquidado === '1' ? 'PAID' as const : 
                    daysOverdue > 0 ? 'OVERDUE' as const : 'PENDING' as const,
             daysOverdue: Math.max(0, daysOverdue),
-            invoicePdfUrl: rec.fatura_url || null,
-            boletoUrl: rec.boleto_url || null,
-            paidAt: rec.data_recebimento ? new Date(rec.data_recebimento) : null,
-            paidValue: valorRecebido,
+            paidAt: rec.data_liquidacao ? new Date(rec.data_liquidacao) : null,
+            paidValue: rec.liquidado === '1' ? valorTotal : null,
             syncedAt: new Date(),
           };
 
@@ -190,15 +173,15 @@ export class SyncService {
             stats.created++;
           }
         } catch (error) {
-          logger.error(`Erro ao sincronizar conta ${rec.id}:`, error);
+          logger.error(`Erro ao sincronizar recebimento ${rec.id}:`, error);
           stats.errors++;
         }
       }
 
-      logger.info('Sincronização de contas concluída:', stats);
+      logger.info('Sincronização de recebimentos concluída:', stats);
       return stats;
     } catch (error) {
-      logger.error('Erro na sincronização de contas:', error);
+      logger.error('Erro na sincronização de recebimentos:', error);
       throw error;
     }
   }
