@@ -15,15 +15,28 @@ export class SyncService {
       const gestaoClients = await gestaoClickService.getAllClients();
       logger.info(`Sincronizando ${gestaoClients.length} clientes do GestãoClick`);
 
+      // DEBUG: Mostra o primeiro cliente completo
+      if (gestaoClients.length > 0) {
+        const primeiro = gestaoClients[0];
+        console.log('=== PRIMEIRO CLIENTE RAW ===');
+        console.log(JSON.stringify(primeiro, null, 2));
+        console.log('=== CAMPOS DISPONIVEIS ===');
+        console.log(Object.keys(primeiro));
+        console.log('=== FIM DEBUG ===');
+      }
+
       for (const gc of gestaoClients) {
         try {
-          // Debug: log dos dados do cliente
-          logger.info(`Cliente ${gc.id} dados brutos:`, JSON.stringify(gc).substring(0, 500));
+          // Tenta pegar o documento de várias formas possíveis
+          const rawClient = gc as Record<string, unknown>;
+          const cnpj = (rawClient.cnpj || rawClient.CNPJ || '') as string;
+          const cpf = (rawClient.cpf || rawClient.CPF || '') as string;
+          const cpfCnpj = (rawClient.cpf_cnpj || rawClient.CPF_CNPJ || '') as string;
           
-          // Monta o documento (CPF ou CNPJ)
-          const document = gc.cnpj?.replace(/\D/g, '') || gc.cpf?.replace(/\D/g, '') || '';
+          // Remove caracteres não numéricos
+          const document = cnpj?.replace(/\D/g, '') || cpf?.replace(/\D/g, '') || cpfCnpj?.replace(/\D/g, '') || '';
           
-          logger.info(`Cliente ${gc.id}: cpf=${gc.cpf}, cnpj=${gc.cnpj}, document=${document}`);
+          console.log(`Cliente ${gc.id}: cnpj="${cnpj}", cpf="${cpf}", cpf_cnpj="${cpfCnpj}", document="${document}"`);
           
           if (!document) {
             logger.warn(`Cliente ${gc.id} (${gc.nome}) não tem CPF/CNPJ, pulando...`);
