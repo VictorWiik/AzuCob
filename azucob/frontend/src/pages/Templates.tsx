@@ -24,8 +24,8 @@ export default function Templates() {
 
   const fetchTemplates = async () => {
     try {
-      const response = await api.get('/templates')
-      setTemplates(response.data)
+      const data = await api.get('/templates')
+      setTemplates(data || [])
     } catch (error) {
       toast.error('Erro ao carregar templates')
     } finally {
@@ -35,8 +35,8 @@ export default function Templates() {
 
   const fetchVariables = async () => {
     try {
-      const response = await api.get('/templates/variables')
-      setVariables(response.data)
+      const data = await api.get('/templates/variables')
+      setVariables(data || [])
     } catch (error) {
       console.error('Erro ao carregar variáveis')
     }
