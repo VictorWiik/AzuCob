@@ -36,11 +36,16 @@ const formatCurrency = (value: number) => {
   }).format(value)
 }
 
+const defaultIntegrationStatus: IntegrationStatus = {
+  gestaoClick: { connected: false, lastSync: null },
+  efiBanco: { connected: false, lastSync: null },
+}
+
 export default function Dashboard() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [topDebtors, setTopDebtors] = useState<TopDebtor[]>([])
   const [recentCharges, setRecentCharges] = useState<RecentCharge[]>([])
-  const [integrationStatus, setIntegrationStatus] = useState<IntegrationStatus | null>(null)
+  const [integrationStatus, setIntegrationStatus] = useState<IntegrationStatus>(defaultIntegrationStatus)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const { user } = useAuthStore()
@@ -49,15 +54,15 @@ export default function Dashboard() {
   const loadData = async () => {
     try {
       const [summaryData, debtorsData, chargesData, statusData] = await Promise.all([
-        api.getDashboardSummary(),
-        api.getTopDebtors(),
-        api.getRecentCharges(),
-        api.getIntegrationStatus(),
+        api.getDashboardSummary().catch(() => null),
+        api.getTopDebtors().catch(() => []),
+        api.getRecentCharges().catch(() => []),
+        api.getIntegrationStatus().catch(() => defaultIntegrationStatus),
       ])
       setSummary(summaryData)
-      setTopDebtors(debtorsData)
-      setRecentCharges(chargesData)
-      setIntegrationStatus(statusData)
+      setTopDebtors(debtorsData || [])
+      setRecentCharges(chargesData || [])
+      setIntegrationStatus(statusData || defaultIntegrationStatus)
     } catch (error) {
       toast.error('Erro ao carregar dados do dashboard')
     } finally {
@@ -85,7 +90,7 @@ export default function Dashboard() {
   const handleProcessCharges = async () => {
     try {
       const result = await api.processCharges()
-      toast.success(result.message)
+      toast.success(result.message || 'Cobranças processadas!')
       loadData()
     } catch (error) {
       toast.error('Erro ao processar cobranças')
@@ -106,13 +111,16 @@ export default function Dashboard() {
     { name: 'Anteriores', value: (summary?.totalOverdue || 0) - (summary?.overdueLastMonth || 0), color: '#FFD93D' },
   ]
 
+  const gestaoClickStatus = integrationStatus?.gestaoClick || { connected: false, lastSync: null }
+  const efiBancoStatus = integrationStatus?.efiBanco || { connected: false, lastSync: null }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Bem-vindo, {user?.name?.split(' ')[0]}!</p>
+          <p className="text-gray-500 mt-1">Bem-vindo, {user?.name?.split(' ')[0] || 'Usuário'}!</p>
         </div>
         <div className="flex gap-3">
           {user?.role === 'ADMIN' && (
@@ -340,24 +348,24 @@ export default function Dashboard() {
               <div className="flex items-center gap-3">
                 <div
                   className={`w-3 h-3 rounded-full ${
-                    integrationStatus?.gestaoClick.connected ? 'bg-green-500' : 'bg-red-500'
+                    gestaoClickStatus.connected ? 'bg-green-500' : 'bg-red-500'
                   }`}
                 />
                 <div>
                   <p className="font-medium text-gray-800">GestãoClick</p>
                   <p className="text-xs text-gray-400">
-                    {integrationStatus?.gestaoClick.lastSync
-                      ? `Última sync: ${new Date(integrationStatus.gestaoClick.lastSync).toLocaleString('pt-BR')}`
+                    {gestaoClickStatus.lastSync
+                      ? `Última sync: ${new Date(gestaoClickStatus.lastSync).toLocaleString('pt-BR')}`
                       : 'Nunca sincronizado'}
                   </p>
                 </div>
               </div>
               <span
                 className={`text-sm font-medium ${
-                  integrationStatus?.gestaoClick.connected ? 'text-green-600' : 'text-red-600'
+                  gestaoClickStatus.connected ? 'text-green-600' : 'text-red-600'
                 }`}
               >
-                {integrationStatus?.gestaoClick.connected ? 'Conectado' : 'Desconectado'}
+                {gestaoClickStatus.connected ? 'Conectado' : 'Desconectado'}
               </span>
             </div>
 
@@ -365,24 +373,24 @@ export default function Dashboard() {
               <div className="flex items-center gap-3">
                 <div
                   className={`w-3 h-3 rounded-full ${
-                    integrationStatus?.efiBanco.connected ? 'bg-green-500' : 'bg-red-500'
+                    efiBancoStatus.connected ? 'bg-green-500' : 'bg-red-500'
                   }`}
                 />
                 <div>
                   <p className="font-medium text-gray-800">Banco Efí</p>
                   <p className="text-xs text-gray-400">
-                    {integrationStatus?.efiBanco.lastSync
-                      ? `Última sync: ${new Date(integrationStatus.efiBanco.lastSync).toLocaleString('pt-BR')}`
+                    {efiBancoStatus.lastSync
+                      ? `Última sync: ${new Date(efiBancoStatus.lastSync).toLocaleString('pt-BR')}`
                       : 'Nunca sincronizado'}
                   </p>
                 </div>
               </div>
               <span
                 className={`text-sm font-medium ${
-                  integrationStatus?.efiBanco.connected ? 'text-green-600' : 'text-red-600'
+                  efiBancoStatus.connected ? 'text-green-600' : 'text-red-600'
                 }`}
               >
-                {integrationStatus?.efiBanco.connected ? 'Conectado' : 'Desconectado'}
+                {efiBancoStatus.connected ? 'Conectado' : 'Desconectado'}
               </span>
             </div>
 
