@@ -161,7 +161,7 @@ model SentEmail {
   receivableId String?
   templateId   String?
   ruleId       String?
-  sentById     String
+  sentById     String?     // Opcional para cobranças automáticas
   toEmails     String[]    // Lista de emails que receberam
   subject      String
   body         String      @db.Text
@@ -176,7 +176,7 @@ model SentEmail {
   receivable Receivable?    @relation(fields: [receivableId], references: [id])
   template   EmailTemplate? @relation(fields: [templateId], references: [id])
   rule       ChargeRule?    @relation(fields: [ruleId], references: [id])
-  sentBy     User           @relation(fields: [sentById], references: [id])
+  sentBy     User?          @relation(fields: [sentById], references: [id])
 }
 
 enum EmailStatus {
