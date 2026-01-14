@@ -37,13 +37,13 @@ export default function Settings() {
 
   const fetchStatus = async () => {
     try {
-      const response = await api.get('/dashboard/integration-status')
-      setIntegrationStatus(response.data.integrations || {
+      const data = await api.get('/dashboard/integration-status')
+      setIntegrationStatus(data?.integrations || {
         gestaoClick: false,
         efi: false,
         resend: false
       })
-      setSyncStatus(response.data.sync || {
+      setSyncStatus(data?.sync || {
         lastClientSync: null,
         lastReceivableSync: null,
         lastEfiSync: null
@@ -82,8 +82,8 @@ export default function Settings() {
     setSyncing('charges')
     
     try {
-      const response = await api.post('/charges/process')
-      toast.success(`Processamento concluído! ${response.data.sent || 0} emails enviados.`)
+      const data = await api.post('/charges/process')
+      toast.success(`Processamento concluído! ${data?.sent || 0} emails enviados.`)
     } catch (error) {
       toast.error('Erro ao processar cobranças')
     } finally {
