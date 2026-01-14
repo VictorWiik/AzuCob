@@ -2,28 +2,46 @@ import axios, { AxiosInstance } from 'axios';
 import { config } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
+interface GestaoClickContato {
+  contato: {
+    tipo_id?: string;
+    nome_tipo?: string;
+    nome: string;
+    contato: string;
+    cargo?: string;
+    observacao?: string;
+  };
+}
+
 interface GestaoClickClient {
-  id: number;
+  id: string;
   nome: string;
-  cpf_cnpj: string;
-  tipo_pessoa: 'F' | 'J';
-  email: string;
+  tipo_pessoa: 'PF' | 'PJ' | 'ES';
+  cpf?: string;
+  cnpj?: string;
+  email?: string;
   telefone?: string;
   celular?: string;
-  cidade?: string;
-  uf?: string;
-  situacao: 'A' | 'I';
+  ativo: '0' | '1';
+  contatos?: GestaoClickContato[];
+  enderecos?: Array<{
+    endereco: {
+      cidade_id?: string;
+      nome_cidade?: string;
+      estado?: string;
+    };
+  }>;
 }
 
 interface GestaoClickReceivable {
-  id: number;
-  cliente_id: number;
+  id: string;
+  cliente_id: string;
   descricao: string;
-  valor: number;
+  valor: string;
   data_vencimento: string;
   situacao: 'A' | 'R' | 'C'; // A=Aberto, R=Recebido, C=Cancelado
   data_recebimento?: string;
-  valor_recebido?: number;
+  valor_recebido?: string;
   boleto_url?: string;
   fatura_url?: string;
 }
@@ -36,14 +54,20 @@ export class GestaoClickService {
       baseURL: config.gestaoClick.apiUrl,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Token': config.gestaoClick.accessToken,
-        'Secret-Access-Token': config.gestaoClick.secretAccess,
+        'access-token': config.gestaoClick.accessToken,
+        'secret-access-token': config.gestaoClick.secretAccess,
       },
     });
 
     // Interceptor para logs
     this.api.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        logger.info('GestaoClick API Response:', {
+          url: response.config?.url,
+          status: response.status,
+        });
+        return response;
+      },
       (error) => {
         logger.error('GestaoClick API Error:', {
           url: error.config?.url,
@@ -60,7 +84,7 @@ export class GestaoClickService {
    */
   async getClients(page = 1, limit = 100): Promise<GestaoClickClient[]> {
     try {
-      const response = await this.api.get('/clientes', {
+      const response = await this.api.get('/api/clientes', {
         params: {
           pagina: page,
           limite: limit,
@@ -98,9 +122,9 @@ export class GestaoClickService {
   /**
    * Busca um cliente específico
    */
-  async getClientById(id: number): Promise<GestaoClickClient | null> {
+  async getClientById(id: string): Promise<GestaoClickClient | null> {
     try {
-      const response = await this.api.get(`/clientes/${id}`);
+      const response = await this.api.get(`/api/clientes/${id}`);
       return response.data.data;
     } catch (error) {
       logger.error(`Erro ao buscar cliente ${id}:`, error);
@@ -115,11 +139,11 @@ export class GestaoClickService {
     situacao?: 'A' | 'R' | 'C';
     dataInicio?: string;
     dataFim?: string;
-    clienteId?: number;
+    clienteId?: string;
     page?: number;
   }): Promise<GestaoClickReceivable[]> {
     try {
-      const response = await this.api.get('/contas_receber', {
+      const response = await this.api.get('/api/contas_receber', {
         params: {
           pagina: params?.page || 1,
           limite: 100,
@@ -143,7 +167,7 @@ export class GestaoClickService {
     const today = new Date().toISOString().split('T')[0];
     
     try {
-      const response = await this.api.get('/contas_receber', {
+      const response = await this.api.get('/api/contas_receber', {
         params: {
           situacao: 'A', // Aberto
           data_vencimento_fim: today, // Vencidas até hoje
@@ -160,12 +184,12 @@ export class GestaoClickService {
   /**
    * Dá baixa em uma conta a receber
    */
-  async settleReceivable(id: number, data: {
+  async settleReceivable(id: string, data: {
     dataRecebimento: string;
     valorRecebido: number;
   }): Promise<boolean> {
     try {
-      await this.api.put(`/contas_receber/${id}`, {
+      await this.api.put(`/api/contas_receber/${id}`, {
         situacao: 'R',
         data_recebimento: data.dataRecebimento,
         valor_recebido: data.valorRecebido,
@@ -180,9 +204,9 @@ export class GestaoClickService {
   /**
    * Busca a fatura PDF de uma conta
    */
-  async getInvoicePdf(receivableId: number): Promise<Buffer | null> {
+  async getInvoicePdf(receivableId: string): Promise<Buffer | null> {
     try {
-      const response = await this.api.get(`/contas_receber/${receivableId}/fatura`, {
+      const response = await this.api.get(`/api/contas_receber/${receivableId}/fatura`, {
         responseType: 'arraybuffer',
       });
       return Buffer.from(response.data);
@@ -197,7 +221,7 @@ export class GestaoClickService {
    */
   async testConnection(): Promise<boolean> {
     try {
-      await this.api.get('/clientes', { params: { limite: 1 } });
+      await this.api.get('/api/clientes', { params: { limite: 1 } });
       return true;
     } catch {
       return false;
