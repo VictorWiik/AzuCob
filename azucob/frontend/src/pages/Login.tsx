@@ -38,17 +38,19 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark via-secondary to-primary flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#1a365d] via-[#2c5282] to-[#4a7ab5] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-xl">AZ</span>
-            </div>
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/azuton-logo.png" 
+              alt="Azuton" 
+              className="h-16 w-auto"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-white">AzuCob</h1>
-          <p className="text-gray-300 mt-2">Sistema de Cobrança Azuton</p>
+          <h1 className="text-2xl font-bold text-white">AzuCob</h1>
+          <p className="text-blue-200 mt-1">Sistema de Cobrança</p>
         </div>
 
         {/* Login form */}
@@ -64,7 +66,7 @@ export default function Login() {
                 id="email"
                 type="email"
                 autoComplete="email"
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors ${
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors ${
                   errors.email ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="seu@email.com"
@@ -90,7 +92,7 @@ export default function Login() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors ${
+                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors ${
                     errors.password ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="••••••••"
@@ -118,7 +120,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary to-secondary text-white font-medium rounded-xl hover:shadow-lg hover:shadow-primary/30 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#1a365d] to-[#2c5282] text-white font-medium rounded-xl hover:shadow-lg hover:shadow-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -136,7 +138,7 @@ export default function Login() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-gray-400 text-sm mt-6">
+        <p className="text-center text-blue-200 text-sm mt-6">
           © {new Date().getFullYear()} Azuton Tecnologia
         </p>
       </div>
