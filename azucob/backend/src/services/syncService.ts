@@ -17,6 +17,22 @@ export class SyncService {
 
       for (const gc of gestaoClients) {
         try {
+          // Monta o documento (CPF ou CNPJ)
+          const document = gc.cnpj?.replace(/\D/g, '') || gc.cpf?.replace(/\D/g, '') || '';
+          
+          if (!document) {
+            logger.warn(`Cliente ${gc.id} (${gc.nome}) não tem CPF/CNPJ, pulando...`);
+            stats.errors++;
+            continue;
+          }
+
+          const documentType = gc.tipo_pessoa === 'PJ' ? 'CNPJ' : 'CPF';
+
+          // Pega cidade e estado do primeiro endereço
+          const endereco = gc.enderecos?.[0]?.endereco;
+          const city = endereco?.nome_cidade || null;
+          const state = endereco?.estado || null;
+
           const existingClient = await prisma.client.findUnique({
             where: { gestaoClickId: gc.id.toString() },
           });
@@ -24,26 +40,60 @@ export class SyncService {
           const clientData = {
             gestaoClickId: gc.id.toString(),
             name: gc.nome,
-            document: gc.cpf_cnpj,
-            documentType: gc.tipo_pessoa === 'F' ? 'CPF' : 'CNPJ',
+            document: document,
+            documentType: documentType,
             primaryEmail: gc.email || null,
             phone: gc.telefone || gc.celular || null,
-            city: gc.cidade || null,
-            state: gc.uf || null,
-            active: gc.situacao === 'A',
+            city: city,
+            state: state,
+            active: gc.ativo === '1',
             syncedAt: new Date(),
           };
+
+          let clientId: string;
 
           if (existingClient) {
             await prisma.client.update({
               where: { id: existingClient.id },
               data: clientData,
             });
+            clientId = existingClient.id;
             stats.updated++;
           } else {
-            await prisma.client.create({ data: clientData });
+            const newClient = await prisma.client.create({ data: clientData });
+            clientId = newClient.id;
             stats.created++;
           }
+
+          // Sincroniza emails de contato
+          if (gc.contatos && gc.contatos.length > 0) {
+            // Remove emails antigos sincronizados
+            await prisma.clientEmail.deleteMany({
+              where: { 
+                clientId: clientId,
+                gestaoClickContactId: { not: null }
+              },
+            });
+
+            // Adiciona emails de contato do GestãoClick
+            for (const contato of gc.contatos) {
+              const email = contato.contato?.contato;
+              const nome = contato.contato?.nome;
+              
+              // Verifica se é um email válido
+              if (email && email.includes('@')) {
+                await prisma.clientEmail.create({
+                  data: {
+                    clientId: clientId,
+                    email: email,
+                    name: nome || null,
+                    gestaoClickContactId: contato.contato?.tipo_id || null,
+                  },
+                });
+              }
+            }
+          }
+
         } catch (error) {
           logger.error(`Erro ao sincronizar cliente ${gc.id}:`, error);
           stats.errors++;
@@ -85,6 +135,10 @@ export class SyncService {
 
           const dueDate = new Date(rec.data_vencimento);
           const daysOverdue = differenceInDays(today, dueDate);
+          const valor = typeof rec.valor === 'string' ? parseFloat(rec.valor) : rec.valor;
+          const valorRecebido = rec.valor_recebido 
+            ? (typeof rec.valor_recebido === 'string' ? parseFloat(rec.valor_recebido) : rec.valor_recebido)
+            : null;
 
           const existing = await prisma.receivable.findUnique({
             where: { gestaoClickId: rec.id.toString() },
@@ -94,7 +148,7 @@ export class SyncService {
             gestaoClickId: rec.id.toString(),
             clientId: client.id,
             description: rec.descricao,
-            value: rec.valor,
+            value: valor,
             dueDate: dueDate,
             status: rec.situacao === 'R' ? 'PAID' as const : 
                    rec.situacao === 'C' ? 'CANCELLED' as const :
@@ -103,7 +157,7 @@ export class SyncService {
             invoicePdfUrl: rec.fatura_url || null,
             boletoUrl: rec.boleto_url || null,
             paidAt: rec.data_recebimento ? new Date(rec.data_recebimento) : null,
-            paidValue: rec.valor_recebido || null,
+            paidValue: valorRecebido,
             syncedAt: new Date(),
           };
 
