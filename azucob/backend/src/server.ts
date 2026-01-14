@@ -3,7 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cron from 'node-cron';
-
 import { config } from './config/env.js';
 import { connectDatabase } from './config/database.js';
 import { logger } from './utils/logger.js';
@@ -20,18 +19,27 @@ const app = express();
 // Segurança
 app.use(helmet());
 
-// CORS
+// CORS - Permitir múltiplas origens
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://gregarious-harmony-production.up.railway.app',
+  config.frontend.url,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: config.frontend.url,
+    origin: allowedOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
 // Rate Limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // Máximo 100 requests por IP
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: { error: 'Muitas requisições. Tente novamente em alguns minutos.' },
 });
 app.use('/api', limiter);
@@ -71,7 +79,6 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
 // ============================================
 
 function setupCronJobs() {
-  // Sincronização com GestãoClick (diariamente às 6h)
   cron.schedule(config.cron.syncGestaoClick, async () => {
     logger.info('Iniciando sincronização agendada com GestãoClick...');
     try {
@@ -82,7 +89,6 @@ function setupCronJobs() {
     }
   });
 
-  // Sincronização com Efí (a cada 4 horas)
   cron.schedule(config.cron.syncEfi, async () => {
     logger.info('Iniciando sincronização agendada com Efí...');
     try {
@@ -92,7 +98,6 @@ function setupCronJobs() {
     }
   });
 
-  // Processamento de cobranças (segunda a sexta às 9h)
   cron.schedule(config.cron.sendCharges, async () => {
     logger.info('Iniciando processamento agendado de cobranças...');
     try {
@@ -111,15 +116,12 @@ function setupCronJobs() {
 
 async function start() {
   try {
-    // Conecta ao banco de dados
     await connectDatabase();
 
-    // Configura cron jobs
     if (config.env === 'production') {
       setupCronJobs();
     }
 
-    // Inicia o servidor
     app.listen(config.port, () => {
       logger.info(`🚀 AzuCob API running on port ${config.port}`);
       logger.info(`📡 Environment: ${config.env}`);
@@ -130,7 +132,6 @@ async function start() {
   }
 }
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received. Shutting down gracefully...');
   process.exit(0);
