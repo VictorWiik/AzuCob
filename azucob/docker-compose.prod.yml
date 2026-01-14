@@ -1,0 +1,91 @@
+version: '3.8'
+
+# Production Docker Compose for AzuCob
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: azucob-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-azucob}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-azucob}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-azucob}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - azucob-internal
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: azucob-backend
+    restart: always
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-azucob}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-azucob}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      GESTAOCLICK_ACCESS_TOKEN: ${GESTAOCLICK_ACCESS_TOKEN}
+      GESTAOCLICK_SECRET_ACCESS: ${GESTAOCLICK_SECRET_ACCESS}
+      EFI_CLIENT_ID: ${EFI_CLIENT_ID}
+      EFI_CLIENT_SECRET: ${EFI_CLIENT_SECRET}
+      EFI_CERTIFICATE_PATH: ${EFI_CERTIFICATE_PATH}
+      EFI_SANDBOX: ${EFI_SANDBOX:-false}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_NAME: ${RESEND_FROM_NAME:-AzuCob}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./certs:/app/certs:ro
+      - backend_logs:/app/logs
+    networks:
+      - azucob-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  # Frontend with Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    container_name: azucob-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - azucob-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+volumes:
+  postgres_data:
+    name: azucob-postgres-data
+  backend_logs:
+    name: azucob-backend-logs
+
+networks:
+  azucob-internal:
+    name: azucob-internal
+    driver: bridge

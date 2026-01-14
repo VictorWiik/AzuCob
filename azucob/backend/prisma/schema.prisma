@@ -1,0 +1,220 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USUÁRIOS DO SISTEMA
+// ============================================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(USER)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  sentEmails   SentEmail[]
+  auditLogs    AuditLog[]
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+// ============================================
+// CLIENTES (sincronizados do GestãoClick)
+// ============================================
+
+model Client {
+  id                 String   @id @default(uuid())
+  gestaoClickId      String   @unique // ID no GestãoClick
+  name               String
+  document           String   // CPF ou CNPJ
+  documentType       String   // CPF ou CNPJ
+  primaryEmail       String?  // Email principal do GestãoClick
+  phone              String?
+  city               String?
+  state              String?
+  active             Boolean  @default(true)
+  syncedAt           DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relacionamentos
+  additionalEmails   ClientEmail[]
+  receivables        Receivable[]
+  sentEmails         SentEmail[]
+}
+
+// Emails adicionais de cobrança (configurados no AzuCob)
+model ClientEmail {
+  id        String   @id @default(uuid())
+  clientId  String
+  email     String
+  name      String?  // Nome do contato
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, email])
+}
+
+// ============================================
+// CONTAS A RECEBER (sincronizadas do GestãoClick)
+// ============================================
+
+model Receivable {
+  id               String          @id @default(uuid())
+  gestaoClickId    String          @unique // ID no GestãoClick
+  efiChargeId      String?         // ID da cobrança no Efí
+  clientId         String
+  description      String
+  value            Decimal         @db.Decimal(10, 2)
+  dueDate          DateTime
+  status           ReceivableStatus @default(PENDING)
+  invoicePdfUrl    String?         // URL da fatura no GestãoClick
+  boletoUrl        String?         // URL do boleto no Efí
+  boletoBarcode    String?         // Código de barras
+  boletoLine       String?         // Linha digitável
+  daysOverdue      Int             @default(0)
+  paidAt           DateTime?
+  paidValue        Decimal?        @db.Decimal(10, 2)
+  syncedAt         DateTime        @default(now())
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  // Relacionamentos
+  client     Client      @relation(fields: [clientId], references: [id])
+  sentEmails SentEmail[]
+
+  @@index([dueDate])
+  @@index([status])
+  @@index([clientId])
+}
+
+enum ReceivableStatus {
+  PENDING    // Aguardando pagamento
+  OVERDUE    // Em atraso
+  PAID       // Pago
+  CANCELLED  // Cancelado
+}
+
+// ============================================
+// REGRAS DE COBRANÇA
+// ============================================
+
+model ChargeRule {
+  id          String   @id @default(uuid())
+  name        String   // Ex: "Cobrança D+3", "Cobrança D+7"
+  daysOverdue Int      // Dias após vencimento para enviar
+  templateId  String
+  isActive    Boolean  @default(true)
+  sendBoleto  Boolean  @default(true)
+  sendInvoice Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  template  EmailTemplate @relation(fields: [templateId], references: [id])
+  sentEmails SentEmail[]
+}
+
+// ============================================
+// TEMPLATES DE EMAIL
+// ============================================
+
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  name        String   // Nome do template
+  subject     String   // Assunto do email
+  htmlContent String   @db.Text // Corpo HTML do email
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  chargeRules ChargeRule[]
+  sentEmails  SentEmail[]
+}
+
+// ============================================
+// EMAILS ENVIADOS (histórico)
+// ============================================
+
+model SentEmail {
+  id           String      @id @default(uuid())
+  clientId     String
+  receivableId String?
+  templateId   String?
+  ruleId       String?
+  sentById     String
+  toEmails     String[]    // Lista de emails que receberam
+  subject      String
+  body         String      @db.Text
+  attachments  String[]    // URLs dos anexos (boleto, fatura)
+  status       EmailStatus @default(PENDING)
+  errorMessage String?
+  sentAt       DateTime?
+  createdAt    DateTime    @default(now())
+
+  // Relacionamentos
+  client     Client         @relation(fields: [clientId], references: [id])
+  receivable Receivable?    @relation(fields: [receivableId], references: [id])
+  template   EmailTemplate? @relation(fields: [templateId], references: [id])
+  rule       ChargeRule?    @relation(fields: [ruleId], references: [id])
+  sentBy     User           @relation(fields: [sentById], references: [id])
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ============================================
+// CONFIGURAÇÕES DO SISTEMA
+// ============================================
+
+model SystemConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String   @db.Text
+  encrypted Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// LOGS DE AUDITORIA
+// ============================================
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String   // Ex: "CREATE_CLIENT", "SEND_EMAIL", "SYNC_GESTAOCLICK"
+  entity    String   // Ex: "Client", "Receivable"
+  entityId  String?
+  oldData   Json?
+  newData   Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([action])
+  @@index([createdAt])
+}

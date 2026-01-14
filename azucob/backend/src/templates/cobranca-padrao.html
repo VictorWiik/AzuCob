@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cobrança - {{dias_atraso}} dias em atraso</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <!-- Header -->
+    <tr>
+      <td style="background: linear-gradient(135deg, #0066CC 0%, #004C99 100%); padding: 30px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">
+          AzuCob
+        </h1>
+        <p style="color: #87CEEB; margin: 10px 0 0 0; font-size: 14px;">
+          Sistema de Cobrança - Azuton
+        </p>
+      </td>
+    </tr>
+    
+    <!-- Content -->
+    <tr>
+      <td style="padding: 40px 30px;">
+        <h2 style="color: #1A1A2E; margin: 0 0 20px 0; font-size: 22px;">
+          Olá, {{nome}}
+        </h2>
+        
+        <p style="color: #555; line-height: 1.6; margin: 0 0 20px 0;">
+          Identificamos que existe uma pendência financeira em sua conta que está em atraso há <strong style="color: #FF3D00;">{{dias_atraso}} dias</strong>.
+        </p>
+        
+        <!-- Info Box -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; border-radius: 8px; margin: 20px 0;">
+          <tr>
+            <td style="padding: 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #e9ecef;">
+                    <span style="color: #888; font-size: 12px; text-transform: uppercase;">Descrição</span>
+                    <p style="color: #1A1A2E; margin: 5px 0 0 0; font-weight: 500;">{{descricao}}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #e9ecef;">
+                    <span style="color: #888; font-size: 12px; text-transform: uppercase;">Vencimento</span>
+                    <p style="color: #1A1A2E; margin: 5px 0 0 0; font-weight: 500;">{{vencimento}}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <span style="color: #888; font-size: 12px; text-transform: uppercase;">Valor</span>
+                    <p style="color: #0066CC; margin: 5px 0 0 0; font-size: 24px; font-weight: 700;">{{valor}}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        
+        <p style="color: #555; line-height: 1.6; margin: 20px 0;">
+          Para sua comodidade, <strong>anexamos o boleto e a fatura</strong> a este email. Você pode efetuar o pagamento através do código de barras ou QR Code Pix disponível no boleto.
+        </p>
+        
+        <!-- CTA Button -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 20px 0; text-align: center;">
+              <p style="color: #888; font-size: 13px; margin: 0 0 10px 0;">
+                Caso já tenha efetuado o pagamento, por favor desconsidere este email.
+              </p>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Warning Box -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FFF8E1; border-left: 4px solid #FFB300; border-radius: 0 8px 8px 0; margin: 20px 0;">
+          <tr>
+            <td style="padding: 15px 20px;">
+              <p style="color: #856404; margin: 0; font-size: 14px;">
+                <strong>⚠️ Importante:</strong> A manutenção de débitos em aberto pode resultar em restrições em nossos serviços e eventual negativação junto aos órgãos de proteção ao crédito.
+              </p>
+            </td>
+          </tr>
+        </table>
+        
+        <p style="color: #555; line-height: 1.6; margin: 20px 0 0 0;">
+          Caso tenha alguma dúvida ou precise de auxílio, entre em contato conosco pelos canais abaixo.
+        </p>
+      </td>
+    </tr>
+    
+    <!-- Footer -->
+    <tr>
+      <td style="background-color: #1A1A2E; padding: 30px; text-align: center;">
+        <p style="color: #ffffff; margin: 0 0 10px 0; font-size: 16px; font-weight: 600;">
+          Azuton Tecnologia
+        </p>
+        <p style="color: #87CEEB; margin: 0 0 5px 0; font-size: 14px;">
+          📞 (11) 4200-1232 | 💬 (11) 5152-0050
+        </p>
+        <p style="color: #87CEEB; margin: 0 0 15px 0; font-size: 14px;">
+          ✉️ azuton@azuton.com
+        </p>
+        <p style="color: #666; margin: 0; font-size: 12px;">
+          Av. Marques de São Vicente, 121 - São Paulo, SP
+        </p>
+        <p style="color: #666; margin: 10px 0 0 0; font-size: 11px;">
+          Este é um email automático. Por favor, não responda diretamente.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

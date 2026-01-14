@@ -1,0 +1,16 @@
+# Railway Configuration for AzuCob
+
+[build]
+builder = "nixpacks"
+buildCommand = "cd backend && npm install && npx prisma generate && npm run build"
+
+[deploy]
+startCommand = "cd backend && npx prisma migrate deploy && npm start"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[service]
+# Backend API Service
+internalPort = 3000
