@@ -8,6 +8,7 @@ import { templateController } from '../controllers/templateController.js';
 import { ruleController } from '../controllers/ruleController.js';
 import { syncService } from '../services/syncService.js';
 import { chargeService } from '../services/chargeService.js';
+import { gestaoClickService } from '../services/gestaoClickService.js';
 
 const router = Router();
 
@@ -74,6 +75,21 @@ router.post('/rules/:id/toggle', (req, res) => ruleController.toggleActive(req, 
 
 router.use(adminMiddleware);
 
+// TESTE: Ver dados brutos do GestãoClick
+router.get('/test/gestaoclick-raw', async (req, res) => {
+  try {
+    const clients = await gestaoClickService.getClients(1, 3); // Pega só 3 clientes
+    res.json({
+      message: 'Dados brutos do GestãoClick',
+      totalRetornado: clients.length,
+      campos: clients.length > 0 ? Object.keys(clients[0]) : [],
+      clientes: clients,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar dados', details: String(error) });
+  }
+});
+
 // Sincronização manual
 router.post('/sync/clients', async (req, res) => {
   try {
@@ -122,3 +138,8 @@ router.post('/charges/process', async (req, res) => {
 });
 
 export default router;
+```
+
+Commit, aguarde o deploy e depois acesse no navegador:
+```
+https://azucob-production.up.railway.app/api/test/gestaoclick-raw
