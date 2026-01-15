@@ -10,15 +10,15 @@ export interface Client {
   gestaoClickId: string
   name: string
   document: string
-  email: string | null
+  documentType?: string
+  primaryEmail: string | null
   phone: string | null
-  address: string | null
   city: string | null
   state: string | null
   active: boolean
   createdAt: string
   updatedAt: string
-  emails: ClientEmail[]
+  additionalEmails?: ClientEmail[]
   receivables?: Receivable[]
 }
 
@@ -33,18 +33,28 @@ export interface ClientEmail {
 export interface Receivable {
   id: string
   gestaoClickId: string
+  efiChargeId: string | null
   clientId: string
   description: string
-  amount: number
+  value: string | number // Pode vir como string da API
   dueDate: string
   status: 'PENDING' | 'OVERDUE' | 'PAID' | 'CANCELLED'
-  efiChargeId: string | null
-  efiBoletoUrl: string | null
-  invoiceUrl: string | null
+  invoicePdfUrl: string | null
+  boletoUrl: string | null
+  boletoBarcode: string | null
+  boletoLine: string | null
   daysOverdue: number
+  paidAt: string | null
+  paidValue: string | number | null
+  syncedAt: string
   createdAt: string
   updatedAt: string
-  client?: Client
+  client?: {
+    id: string
+    name: string
+    document: string
+    primaryEmail: string | null
+  }
 }
 
 export interface EmailTemplate {
@@ -52,8 +62,8 @@ export interface EmailTemplate {
   name: string
   subject: string
   htmlContent: string
-  isDefault: boolean
-  active: boolean
+  isActive?: boolean
+  active?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -68,28 +78,21 @@ export interface ChargeRule {
   sendInvoice: boolean
   createdAt: string
   updatedAt: string
-  template?: Template
-}
-
-export interface Template {
-  id: string
-  name: string
-  subject: string
-  htmlContent: string
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
+  template?: EmailTemplate
 }
 
 export interface SentEmail {
   id: string
   receivableId: string
   templateId: string
-  recipients: string[]
+  toEmails: string[]
   subject: string
-  sentAt: string
+  body: string
+  attachments: string[]
   status: 'SENT' | 'FAILED' | 'PENDING'
   errorMessage: string | null
+  sentAt: string | null
+  createdAt: string
   receivable?: Receivable
   template?: EmailTemplate
 }
@@ -135,11 +138,17 @@ export interface IntegrationStatus {
 
 export interface PaginatedResponse<T> {
   data: T[]
-  meta: {
+  meta?: {
     total: number
     page: number
     limit: number
     totalPages: number
+  }
+  pagination?: {
+    total: number
+    page: number
+    limit: number
+    pages: number
   }
 }
 
