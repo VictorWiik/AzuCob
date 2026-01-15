@@ -199,11 +199,16 @@ export class SyncService {
 
   /**
    * Atualiza informações de boletos do Efí Bank
+   * Tenta vincular por múltiplos critérios:
+   * 1. custom_id (ID do GestãoClick)
+   * 2. Descrição + Valor + Data de vencimento
+   * 3. CPF/CNPJ do cliente + Valor + Data de vencimento
    */
-  async syncEfiBoletos(): Promise<{ updated: number; errors: number }> {
-    const stats = { updated: 0, errors: 0 };
+  async syncEfiBoletos(): Promise<{ updated: number; errors: number; notFound: number }> {
+    const stats = { updated: 0, errors: 0, notFound: 0 };
 
     try {
+      // Busca recebimentos que precisam de atualização de boleto
       const receivables = await prisma.receivable.findMany({
         where: {
           status: { in: ['PENDING', 'OVERDUE'] },
@@ -215,22 +220,122 @@ export class SyncService {
         include: { client: true },
       });
 
+      if (receivables.length === 0) {
+        logger.info('Nenhum recebimento precisando de atualização de boleto');
+        return stats;
+      }
+
+      logger.info(`Buscando boletos para ${receivables.length} recebimentos`);
+
+      // Busca todos os boletos em aberto do Efí (últimos 120 dias)
+      const dateFrom = format(subDays(new Date(), 120), 'yyyy-MM-dd');
+      const dateTo = format(new Date(), 'yyyy-MM-dd');
+      
+      let allCharges: any[] = [];
+      try {
+        // Busca boletos waiting e unpaid
+        const waitingCharges = await efiService.getCharges({
+          status: 'waiting',
+          dateFrom,
+          dateTo,
+          limit: 500,
+        });
+        const unpaidCharges = await efiService.getCharges({
+          status: 'unpaid',
+          dateFrom,
+          dateTo,
+          limit: 500,
+        });
+        allCharges = [...waitingCharges, ...unpaidCharges];
+        logger.info(`Encontrados ${allCharges.length} boletos no Efí`);
+      } catch (error) {
+        logger.error('Erro ao buscar boletos do Efí:', error);
+        throw error;
+      }
+
+      // Para cada recebimento, tenta encontrar o boleto correspondente
       for (const rec of receivables) {
         try {
-          const charges = await efiService.getChargesByCustomId(rec.gestaoClickId);
+          let matchedCharge: any = null;
 
-          if (charges.length > 0) {
-            const charge = charges[0];
+          // Estratégia 1: Busca por custom_id (ID do GestãoClick)
+          matchedCharge = allCharges.find(
+            (charge) => charge.custom_id === rec.gestaoClickId
+          );
+
+          // Estratégia 2: Busca por descrição (ex: "Locação nº 2648")
+          if (!matchedCharge && rec.description) {
+            matchedCharge = allCharges.find((charge) => {
+              const itemName = charge.items?.[0]?.name || '';
+              return itemName.toLowerCase().includes(rec.description.toLowerCase()) ||
+                     rec.description.toLowerCase().includes(itemName.toLowerCase());
+            });
+          }
+
+          // Estratégia 3: Busca por valor + data de vencimento aproximada
+          if (!matchedCharge) {
+            const recValue = Number(rec.value);
+            const recDueDate = new Date(rec.dueDate);
+            
+            matchedCharge = allCharges.find((charge) => {
+              // Calcula valor total do boleto (em centavos para reais)
+              const chargeValue = charge.total / 100;
+              const chargeDueDate = charge.payment?.banking_billet?.expire_at 
+                ? new Date(charge.payment.banking_billet.expire_at)
+                : null;
+              
+              // Verifica se valor é igual (com tolerância de R$ 0.10)
+              const valueMatch = Math.abs(chargeValue - recValue) < 0.10;
+              
+              // Verifica se data de vencimento é igual (com tolerância de 2 dias)
+              let dateMatch = false;
+              if (chargeDueDate) {
+                const daysDiff = Math.abs(differenceInDays(chargeDueDate, recDueDate));
+                dateMatch = daysDiff <= 2;
+              }
+              
+              return valueMatch && dateMatch;
+            });
+          }
+
+          // Estratégia 4: Busca por CPF/CNPJ do cliente + valor
+          if (!matchedCharge && rec.client?.document) {
+            const clientDoc = rec.client.document.replace(/\D/g, '');
+            const recValue = Number(rec.value);
+            
+            matchedCharge = allCharges.find((charge) => {
+              const chargeDoc = (charge.customer?.cpf || charge.customer?.cnpj || '').replace(/\D/g, '');
+              const chargeValue = charge.total / 100;
+              
+              const docMatch = chargeDoc === clientDoc;
+              const valueMatch = Math.abs(chargeValue - recValue) < 0.10;
+              
+              return docMatch && valueMatch;
+            });
+          }
+
+          // Se encontrou o boleto, atualiza o recebimento
+          if (matchedCharge) {
+            const boletoData = matchedCharge.payment?.banking_billet;
             
             await prisma.receivable.update({
               where: { id: rec.id },
               data: {
-                efiChargeId: charge.charge_id.toString(),
-                boletoUrl: charge.payment?.banking_billet?.link || null,
-                boletoBarcode: charge.payment?.banking_billet?.barcode || null,
+                efiChargeId: matchedCharge.charge_id.toString(),
+                boletoUrl: boletoData?.link || null,
+                boletoBarcode: boletoData?.barcode || null,
+                boletoLine: boletoData?.pix_qrcode || null, // Linha digitável ou PIX
               },
             });
+            
+            logger.info(`Boleto vinculado: Recebimento ${rec.gestaoClickId} -> Charge ${matchedCharge.charge_id}`);
             stats.updated++;
+            
+            // Remove da lista para não vincular de novo
+            allCharges = allCharges.filter(c => c.charge_id !== matchedCharge.charge_id);
+          } else {
+            logger.debug(`Boleto não encontrado para recebimento ${rec.gestaoClickId} (${rec.description})`);
+            stats.notFound++;
           }
         } catch (error) {
           logger.error(`Erro ao sincronizar boleto ${rec.id}:`, error);
@@ -247,16 +352,52 @@ export class SyncService {
   }
 
   /**
+   * Busca detalhes de um boleto específico pelo charge_id
+   */
+  async getBoletoDetails(chargeId: string): Promise<{
+    url: string | null;
+    barcode: string | null;
+    pdfUrl: string | null;
+    status: string | null;
+  } | null> {
+    try {
+      const charge = await efiService.getChargeById(parseInt(chargeId));
+      if (!charge) return null;
+
+      const billet = charge.payment?.banking_billet;
+      return {
+        url: billet?.link || null,
+        barcode: billet?.barcode || null,
+        pdfUrl: billet?.pdf?.charge || null,
+        status: billet?.status || charge.status,
+      };
+    } catch (error) {
+      logger.error(`Erro ao buscar detalhes do boleto ${chargeId}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Executa sincronização completa
    */
-  async fullSync(filterDays?: number, startDate?: string): Promise<void> {
+  async fullSync(filterDays?: number, startDate?: string): Promise<{
+    clients: { created: number; updated: number; errors: number };
+    receivables: { created: number; updated: number; errors: number };
+    boletos: { updated: number; errors: number; notFound: number };
+  }> {
     logger.info('Iniciando sincronização completa...');
     
-    await this.syncClients();
-    await this.syncReceivables(filterDays, startDate);
-    await this.syncEfiBoletos();
+    const clientsResult = await this.syncClients();
+    const receivablesResult = await this.syncReceivables(filterDays, startDate);
+    const boletosResult = await this.syncEfiBoletos();
     
     logger.info('Sincronização completa finalizada');
+    
+    return {
+      clients: clientsResult,
+      receivables: receivablesResult,
+      boletos: boletosResult,
+    };
   }
 }
 
