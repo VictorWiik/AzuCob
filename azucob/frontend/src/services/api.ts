@@ -11,11 +11,6 @@ import type {
 
 // Detecta automaticamente a URL da API baseado no ambiente
 const getApiUrl = () => {
-  // Se variável de ambiente está definida, usa ela
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL
-  }
-  
   // Em produção (Railway), usa a URL do backend
   if (window.location.hostname.includes('railway.app')) {
     return 'https://azucob-production.up.railway.app/api'
@@ -26,6 +21,8 @@ const getApiUrl = () => {
 }
 
 const API_URL = getApiUrl()
+
+console.log('API URL:', API_URL) // Debug temporário
 
 const apiClient = axios.create({
   baseURL: API_URL,
