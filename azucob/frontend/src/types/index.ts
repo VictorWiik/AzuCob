@@ -83,8 +83,9 @@ export interface ChargeRule {
 
 export interface SentEmail {
   id: string
-  receivableId: string
-  templateId: string
+  clientId: string
+  receivableId: string | null
+  templateId: string | null
   toEmails: string[]
   subject: string
   body: string
@@ -95,6 +96,7 @@ export interface SentEmail {
   createdAt: string
   receivable?: Receivable
   template?: EmailTemplate
+  client?: Client
 }
 
 export interface DashboardSummary {
