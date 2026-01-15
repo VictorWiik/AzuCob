@@ -101,11 +101,23 @@ router.post('/sync/clients', async (req, res) => {
 router.post('/sync/receivables', async (req, res) => {
   try {
     const { filterDays, startDate } = req.body;
-    const result = await syncService.syncReceivables(
+    
+    // Sincroniza recebimentos do GestãoClick
+    const receivablesResult = await syncService.syncReceivables(
       filterDays ? parseInt(filterDays) : undefined,
       startDate
     );
-    res.json({ message: 'Sincronização de contas concluída', result });
+    
+    // Sincroniza boletos do Efí
+    const boletosResult = await syncService.syncEfiBoletos();
+    
+    res.json({ 
+      message: 'Sincronização concluída', 
+      result: {
+        receivables: receivablesResult,
+        boletos: boletosResult
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: 'Erro na sincronização' });
   }
