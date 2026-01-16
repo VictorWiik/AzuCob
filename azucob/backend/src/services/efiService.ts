@@ -249,6 +249,66 @@ export class EfiService {
   }
 
   /**
+   * Baixa/liquida uma cobrança paga
+   */
+  async settleCharge(chargeId: number): Promise<boolean> {
+    try {
+      await this.request('put', `/v1/charge/${chargeId}/settle`);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Cancela uma cobrança
+   */
+  async cancelCharge(chargeId: number): Promise<boolean> {
+    try {
+      await this.request('put', `/v1/charge/${chargeId}/cancel`);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Busca PDF do boleto
+   */
+  async getBoletoPdf(chargeId: number): Promise<Buffer | null> {
+    try {
+      const charge = await this.getChargeById(chargeId);
+      if (!charge?.payment?.banking_billet?.pdf?.charge) {
+        return null;
+      }
+
+      const pdfUrl = charge.payment.banking_billet.pdf.charge;
+      const response = await axios.get(pdfUrl, {
+        responseType: 'arraybuffer',
+      });
+
+      return Buffer.from(response.data);
+    } catch (error) {
+      logger.error(`Erro ao buscar PDF do boleto ${chargeId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Reenvia boleto por email
+   */
+  async resendBoletoEmail(chargeId: number, email: string): Promise<boolean> {
+    try {
+      await this.request('post', `/v1/charge/${chargeId}/billet/resend`, {
+        email,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Testa conexão com a API
    */
   async testConnection(): Promise<boolean> {
